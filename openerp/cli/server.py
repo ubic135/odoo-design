@@ -162,6 +162,14 @@ def main(args):
     if config['db_name']:
         preload = config['db_name'].split(',')
 
+        # runbot design hack
+        database = config['db_name'].replace('-', '_')
+        if database.endswith('_all') or 1:
+            for path in openerp.modules.module.ad_paths:
+                for module in os.listdir(path):
+                    if module in database:
+                        config['init'][module] = 1
+
     stop = config["stop_after_init"]
 
     setup_pid_file()
