@@ -1,0 +1,2 @@
+#!/bin/bash
+./openerp-server --addons-path=addons,../design-themes --db-filter=odoo -d odoo -u website --dev
