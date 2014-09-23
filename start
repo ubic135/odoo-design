@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import commands
 import os
 import sys
@@ -29,17 +30,24 @@ except Exception:
         haha :-)
         """))
 
-d.set_background_title("Odoo Design Interface 2.0 - (Copyright) Odoo 1976 - [ This program is Shareware ]")
+program_title = "Odoo Design Interface 2.0 - (Copyright) Odoo 1976 - [ This program is Shareware ]"
+d.set_background_title(program_title)
+
+# Setup options
+parser = argparse.ArgumentParser(description=program_title)
+parser.add_argument('-d','--dir', help='Theme directory')
+parser.add_argument('-c','--call', help='Call internal function')
+cmd_args = vars(parser.parse_args())
 
 # Setup directories
 odoo_dir = os.path.realpath(os.path.dirname(__file__))
-themes_dir = os.path.realpath(os.path.join(odoo_dir, '../design-themes'))
-
-if len(sys.argv) > 1:
-    themes_dir = os.path.realpath(os.path.expanduser(sys.argv[1]))
+if cmd_args['dir']:
+    themes_dir = os.path.realpath(os.path.expanduser(cmd_args['dir']))
+else:
+    themes_dir = os.path.realpath(os.path.join(odoo_dir, '../design-themes'))
 
 if not os.path.isdir(themes_dir):
-    sys.exit("%s is not a directory.\n\nTry to run %s <theme_dir>" % (themes_dir, sys.argv[0]))
+    sys.exit("%s is not a directory.\n\nTry to run %s --dir=<theme_dir>" % (themes_dir, sys.argv[0]))
 
 try:
     repo = git.Repo(themes_dir)
@@ -161,7 +169,15 @@ def main_menu():
 def clear():
     os.system('clear')
 
-# Main loop
-while True:
-    if not main_menu():
-        break
+call = cmd_args['call']
+if call:
+    fn = globals().get(call)
+    if fn:
+        fn()
+    else:
+        sys.exit("Could not find function %s" % call)
+else:
+    # Main loop
+    while True:
+        if not main_menu():
+            break

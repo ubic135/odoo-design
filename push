@@ -1,5 +1,2 @@
 #!/bin/sh
-cd ~/design-themes
-git add -A .
-git commit -amm
-git push origin
+./start --call=push_changes
