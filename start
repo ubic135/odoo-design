@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import commands
 import os
 import sys
 import textwrap
@@ -30,6 +31,7 @@ except Exception:
 
 d.set_background_title("Odoo Design Interface 2.0 - (Copyright) Odoo 1976 - [ This program is Shareware ]")
 
+# Setup directories
 odoo_dir = os.path.realpath(os.path.dirname(__file__))
 themes_dir = os.path.realpath(os.path.join(odoo_dir, '../design-themes'))
 
@@ -44,10 +46,21 @@ try:
 except git.errors.InvalidGitRepositoryError:
     sys.exit("%s is not a git repository" % themes_dir)
 
-def start_server(*args):
-    addons_path = "'%s/addons','%s'" % (odoo_dir, themes_dir)
+def database_exists(dbname):
+    status, out = commands.getstatusoutput("psql -c 'select 1 as test;' -d %s" % dbname)
+    return status == 0
+
+def start_server(args=None, mode='i', module='website'):
+    if args is None:
+        args = []
+    addons_path = "%s/addons,%s" % (odoo_dir, themes_dir)
+    db = repo.active_branch
+    if not database_exists(db):
+        # if database does not exist, install mode is forced
+        mode = 'i'
+    args += ('-' + mode, module)
     cmd = "'%s/openerp-server' start -d '%s' --addons-path='%s' %s --dev" % (
-            odoo_dir, repo.active_branch, addons_path, ' '.join(args)
+            odoo_dir, db, addons_path, ' '.join(args)
         )
     print("Starting %s" % cmd)
     os.system(cmd)
@@ -63,9 +76,22 @@ def repo_is_clean():
     return True
 
 def push_changes():
-    repo.git.add('-A .')
-    repo.git.commit('-amm')
-    repo.git.push('origin')
+    if repo.is_dirty:
+        code, msg = d.inputbox("For your own organisation and a better collaboration,"
+            "it's better to provide a short message explaining your changes.\n\n"
+            "Eg: Added a new 'Contact Us' snippet", width=70)
+        if code == d.OK:
+            clear()
+            print("Pushing changes...")
+            repo.git.add('-A', '.')
+            repo.git.commit('-a', '-m', (msg or 'm'))
+            repo.git.push('origin')
+    return True
+
+def discard_changes():
+    if repo.is_dirty and d.yesno("Are you sure you want to discard your changes ?") == d.OK:
+        repo.git.checkout('.')
+    return True
 
 def switch_branch():
     if repo_is_clean():
@@ -81,10 +107,16 @@ def switch_branch():
         if code == d.OK:
             new_branch = choices[tag]
             try:
+                clear()
+                print("Switching to theme %s..." % new_branch)
                 repo.git.checkout(new_branch)
+                repo.git.pull()
             except:
                 d.msg("There was an error switching to theme `%s`" % new_branch)
     return True
+
+def create_theme():
+    pass
 
 def main_menu():
     title = "Current Theme: %s" % repo.active_branch
@@ -95,21 +127,32 @@ def main_menu():
         ("2)", "Start server and reset database"),
         # ("3)", "Switch to another theme"),
         # ("4)", "Create a new theme"),
-        # ("5)", "Push changes"),
-        # ("6)", "Discard changes"),
-        ("Q)", "Quit"),
     ]
+    if repo.is_dirty:
+        choices.append(("5)", "Push changes"))
+        choices.append(("6)", "Discard changes"))
+    choices.append(("Q)", "Quit"))
     code, tag = d.menu(title, choices=choices, height=20)
-    os.system('clear')
+    clear()
     if code == d.OK:
         if tag == '1)':
-            return start_server('-u website')
+            return start_server(mode='u')
         elif tag == '2)':
-            return start_server('-i website')
+            return start_server(mode='i')
         elif tag == '3)':
             return switch_branch()
+        elif tag == '4)':
+            return create_theme()
+        elif tag == '5)':
+            return push_changes()
+        elif tag == '6)':
+            return discard_changes()
     return None
 
+def clear():
+    os.system('clear')
+
+# Main loop
 while True:
     if not main_menu():
         break
