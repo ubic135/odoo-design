@@ -75,8 +75,16 @@ def repo_is_clean():
         push_changes()
     return True
 
+def pull_changes():
+    try:
+        repo.git.pull()
+        return True
+    except git.GitCommandError:
+        d.msg("Someone else made some conflict changes to your theme. Call 555-fme@odoo.com in order to fix this !`")
+        return False
+
 def push_changes():
-    if repo.is_dirty:
+    if pull_changes() and repo.is_dirty:
         code, msg = d.inputbox("For your own organisation and a better collaboration,"
             "it's better to provide a short message explaining your changes.\n\n"
             "Eg: Added a new 'Contact Us' snippet", width=70)
@@ -91,6 +99,7 @@ def push_changes():
 def discard_changes():
     if repo.is_dirty and d.yesno("Are you sure you want to discard your changes ?") == d.OK:
         repo.git.checkout('.')
+    pull_changes()
     return True
 
 def switch_branch():
@@ -110,7 +119,7 @@ def switch_branch():
                 clear()
                 print("Switching to theme %s..." % new_branch)
                 repo.git.checkout(new_branch)
-                repo.git.pull()
+                pull_changes()
             except:
                 d.msg("There was an error switching to theme `%s`" % new_branch)
     return True
