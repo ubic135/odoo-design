@@ -1,2 +1,115 @@
-#!/bin/bash
-./openerp-server --addons-path=addons,../design-themes --db-filter=odoo -d odoo -u website --dev
+#!/usr/bin/env python
+import os
+import sys
+import textwrap
+try:
+    import git
+    from dialog import Dialog
+    d = Dialog(dialog="dialog")
+except Exception:
+    sys.exit(textwrap.dedent("""
+        Please, first install dependencies by running the following commands:
+
+        Linux
+        -----
+
+        sudo pip install gitpython python2-pythondialog git-qdiff
+        sudo apt-get install dialog
+
+        OSX
+        ---
+
+        pip install gitpython python2-pythondialog git-qdiff
+        brew install dialog
+
+        Windows
+        -------
+
+        haha :-)
+        """))
+
+d.set_background_title("Odoo Design Interface 2.0 - (Copyright) Odoo 1976 - [ This program is Shareware ]")
+
+odoo_dir = os.path.realpath(os.path.dirname(__file__))
+themes_dir = os.path.realpath(os.path.join(odoo_dir, '../design-themes'))
+
+if len(sys.argv) > 1:
+    themes_dir = os.path.realpath(os.path.expanduser(sys.argv[1]))
+
+if not os.path.isdir(themes_dir):
+    sys.exit("%s is not a directory.\n\nTry to run %s <theme_dir>" % (themes_dir, sys.argv[0]))
+
+try:
+    repo = git.Repo(themes_dir)
+except git.errors.InvalidGitRepositoryError:
+    sys.exit("%s is not a git repository" % themes_dir)
+
+def start_server(*args):
+    addons_path = "'%s/addons','%s'" % (odoo_dir, themes_dir)
+    cmd = "'%s/openerp-server' start -d '%s' --addons-path='%s' %s --dev" % (
+            odoo_dir, repo.active_branch, addons_path, ' '.join(args)
+        )
+    print("Starting %s" % cmd)
+    os.system(cmd)
+    return True
+
+def repo_is_clean():
+    if repo.is_dirty:
+        msg = "In order to continue you have to push your changes first.\n\nDo you want to do this now ?"
+        r = d.yesno(msg, width=50)
+        if r != d.OK:
+            return False
+        push_changes()
+    return True
+
+def push_changes():
+    repo.git.add('-A .')
+    repo.git.commit('-amm')
+    repo.git.push('origin')
+
+def switch_branch():
+    if repo_is_clean():
+        default = None
+        choices = {}
+        for i, branch in enumerate(sorted(repo.branches, key=lambda r: r.name)):
+            code = '%d)' % (i + 1)
+            if branch.name == repo.active_branch:
+                default = code
+            choices[code] = branch.name
+        choices_list = [(k, v) for k, v in choices.items()]
+        code, tag = d.menu("Select the theme to work on", choices=choices_list, default_item=default)
+        if code == d.OK:
+            new_branch = choices[tag]
+            try:
+                repo.git.checkout(new_branch)
+            except:
+                d.msg("There was an error switching to theme `%s`" % new_branch)
+    return True
+
+def main_menu():
+    title = "Current Theme: %s" % repo.active_branch
+    if repo.is_dirty:
+        title += "\n\nNOTE: You have unpushed changes !"
+    choices = [
+        ("1)", "Start server"),
+        ("2)", "Start server and reset database"),
+        # ("3)", "Switch to another theme"),
+        # ("4)", "Create a new theme"),
+        # ("5)", "Push changes"),
+        # ("6)", "Discard changes"),
+        ("Q)", "Quit"),
+    ]
+    code, tag = d.menu(title, choices=choices, height=20)
+    os.system('clear')
+    if code == d.OK:
+        if tag == '1)':
+            return start_server('-u website')
+        elif tag == '2)':
+            return start_server('-i website')
+        elif tag == '3)':
+            return switch_branch()
+    return None
+
+while True:
+    if not main_menu():
+        break
