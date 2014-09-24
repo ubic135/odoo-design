@@ -59,10 +59,15 @@ def database_exists(dbname):
     return status == 0
 
 def start_server(args=None, mode='i', module='website'):
+    db = repo.active_branch
+    db_cmp = db.replace('-', '_')
+    modules = os.listdir(themes_dir)
+    for mod in modules:
+        if mod in db_cmp:
+            module = mod
     if args is None:
         args = []
     addons_path = "%s/addons,%s" % (odoo_dir, themes_dir)
-    db = repo.active_branch
     if not database_exists(db):
         # if database does not exist, install mode is forced
         mode = 'i'
