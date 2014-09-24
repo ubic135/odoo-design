@@ -113,7 +113,8 @@ def pull_changes():
         repo.git.pull()
         return True
     except git.GitCommandError:
-        d.msgbox("Someone else made some conflict changes to your theme. Call 555-fme@odoo.com in order to fix this !`")
+        d.msgbox("Someone else made changes that conflicts with yours.\n\n"
+                 "Call 555-fme@odoo.com in order to fix this !", width=60)
         return False
 
 def push_changes():
@@ -132,7 +133,6 @@ def push_changes():
 def discard_changes():
     if repo.is_dirty and d.yesno("Are you sure you want to discard your changes ?") == d.OK:
         repo.git.checkout('.')
-    pull_changes()
     return True
 
 def switch_branch():
