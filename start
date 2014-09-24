@@ -50,6 +50,7 @@ if not os.path.isdir(themes_dir):
     sys.exit("%s is not a directory.\n\nTry to run %s --dir=<theme_dir>" % (themes_dir, sys.argv[0]))
 
 try:
+    server = git.Repo(odoo_dir)
     repo = git.Repo(themes_dir)
 except git.errors.InvalidGitRepositoryError:
     sys.exit("%s is not a git repository" % themes_dir)
@@ -68,15 +69,27 @@ def start_server(args=None, mode='i', module='website'):
     if args is None:
         args = []
     addons_path = "%s/addons,%s" % (odoo_dir, themes_dir)
+
+    server_updated = server_update()
     if not database_exists(db):
         # if database does not exist, install mode is forced
         mode = 'i'
+    elif server_updated:
+        d.msgbox("A new version of the server has been downloaded and a database upgrade will be forced.\n\n"
+                 "If you experience problems, maybe you should consider deleting your databases.", width=60)
+        mode = 'u'
+        module = 'base'
+
     args += ('-' + mode, module)
     cmd = "'%s/openerp-server' start -d '%s' --addons-path='%s' %s --dev" % (
             odoo_dir, db, addons_path, ' '.join(args)
         )
-    print("Starting %s" % cmd)
+    print("Starting Server: %s" % cmd)
     os.system(cmd)
+    if server_updated:
+        clear()
+        print("As the server has recently been updated, it is necessary that you restart the 'start.sh' program again.\n\n")
+        return False
     return True
 
 def repo_is_clean():
@@ -88,6 +101,11 @@ def repo_is_clean():
         push_changes()
     return True
 
+def server_update():
+    clear()
+    print("Check for server updates...")
+    return server.git.pull() != 'Already up-to-date.' # Gasp!
+
 def pull_changes():
     try:
         clear()
@@ -95,7 +113,7 @@ def pull_changes():
         repo.git.pull()
         return True
     except git.GitCommandError:
-        d.msg("Someone else made some conflict changes to your theme. Call 555-fme@odoo.com in order to fix this !`")
+        d.msgbox("Someone else made some conflict changes to your theme. Call 555-fme@odoo.com in order to fix this !`")
         return False
 
 def push_changes():
@@ -136,7 +154,7 @@ def switch_branch():
                 repo.git.checkout(new_branch)
                 pull_changes()
             except:
-                d.msg("There was an error switching to theme `%s`" % new_branch)
+                d.msgbox("There was an error switching to theme `%s`" % new_branch)
     return True
 
 def create_theme():
