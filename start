@@ -131,8 +131,11 @@ def push_changes():
     return True
 
 def discard_changes():
-    if repo.is_dirty and d.yesno("Are you sure you want to discard your changes ?") == d.OK:
-        repo.git.checkout('.')
+    msg = "Are you REALLY sure you want to discard your changes ?\n\nType 'ok' in the box below to proceed."
+    if repo.is_dirty:
+        button, text = d.inputbox(msg, width=60)
+        if button == d.OK and text.lower() == 'ok':
+            repo.git.checkout('.')
     return True
 
 def show_diff():
@@ -169,7 +172,7 @@ def switch_branch():
     return True
 
 def create_theme():
-    pass
+    return True
 
 def main_menu():
     title = "Current Theme: %s" % repo.active_branch
@@ -178,7 +181,7 @@ def main_menu():
     choices = [
         ("1)", "Start server"),
         ("2)", "Start server and reset database"),
-        # ("3)", "Create a new theme"),
+        ("3)", "Create a new theme [NOT READY TO USE]"),
     ]
     if len(repo.branches) > 1:
         choices.append(("4)", "Switch to another theme"))
