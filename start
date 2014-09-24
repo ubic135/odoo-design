@@ -56,9 +56,19 @@ try:
 except git.errors.InvalidGitRepositoryError:
     sys.exit("%s is not a git repository" % themes_dir)
 
+def database_list():
+    cmd = 'psql -c "SELECT datname FROM pg_database WHERE datistemplate = false and datname <> \'postgres\';" -d postgres'
+    status, out = commands.getstatusoutput(cmd)
+    if status:
+        sys.exit(out)
+        d.msgbox("Could not fetch database list")
+        return []
+    else:
+        db_list = [db.strip() for db in out.splitlines()[2:-1]]
+        return db_list
+
 def database_exists(dbname):
-    status, out = commands.getstatusoutput("psql -c 'select 1 as test;' -d %s" % dbname)
-    return status == 0
+    return dbname in database_list()
 
 def start_server(args=None, mode='i', module='website'):
     db = repo.active_branch
@@ -91,6 +101,20 @@ def start_server(args=None, mode='i', module='website'):
         clear()
         print("As the server has recently been updated, it is necessary that you restart the 'start.sh' program again.\n\n")
         return False
+    return True
+
+def db_manager():
+    databases = database_list()
+    if databases:
+        choices = [(db, "", False) for db in databases]
+        info = "\nYou should drop a database if it is in a buggy state and you want to reinstall from scratch.\n"
+        btn, dbs = d.checklist(info, choices=choices, title="Drop a database", height=(len(databases) + 10), list_height=len(databases))
+        if btn == d.OK and dbs:
+            clear()
+            for db in dbs:
+                print("Dropping database %s" % db)
+                if os.system('dropdb %s' % db):
+                    d.msgbox("Could not drop database '%s'" % db)
     return True
 
 def repo_is_clean():
@@ -181,17 +205,18 @@ def main_menu():
     choices = [
         ("1)", "Start server"),
         ("2)", "Start server and reset database"),
-        ("3)", "Create a new theme [NOT READY TO USE]"),
+        ("3)", "Drop a database"),
+        ("4)", "Create a new theme [NOT READY TO USE]"),
     ]
     if len(repo.branches) > 1:
-        choices.append(("4)", "Switch to another theme"))
+        choices.append(("5)", "Switch to another theme"))
 
     if repo.is_dirty:
-        choices.append(("5)", "Push changes"))
-        choices.append(("6)", "Discard changes"))
-        choices.append(("7)", "View changes"))
+        choices.append(("6)", "Push changes"))
+        choices.append(("7)", "Discard changes"))
+        choices.append(("8)", "View changes"))
     choices.append(("Q)", "Quit"))
-    code, tag = d.menu(title, choices=choices, height=20)
+    code, tag = d.menu(title, choices=choices, height=(len(choices) + 7))
     clear()
     if code == d.OK:
         if tag == '1)':
@@ -199,14 +224,16 @@ def main_menu():
         elif tag == '2)':
             return start_server(mode='i')
         elif tag == '3)':
-            return create_theme()
+            return db_manager()
         elif tag == '4)':
-            return switch_branch()
+            return create_theme()
         elif tag == '5)':
-            return push_changes()
+            return switch_branch()
         elif tag == '6)':
-            return discard_changes()
+            return push_changes()
         elif tag == '7)':
+            return discard_changes()
+        elif tag == '8)':
             return show_diff()
     return None
 
