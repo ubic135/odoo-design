@@ -31,6 +31,7 @@ except Exception:
         """))
 
 program_title = "Odoo Design Interface 2.0 - (Copyright) Odoo 1976 - [ This program is Shareware ]"
+emergency = "Call 555-fme@odoo.com in order to fix this !"
 d.set_background_title(program_title)
 
 # Setup options
@@ -95,7 +96,7 @@ def start_server(args=None, mode='i', module='website'):
 def repo_is_clean():
     if repo.is_dirty:
         msg = "In order to continue you have to push your changes first.\n\nDo you want to do this now ?"
-        r = d.yesno(msg, width=50)
+        r = d.yesno(msg, width=40)
         if r != d.OK:
             return False
         push_changes()
@@ -113,8 +114,7 @@ def pull_changes():
         repo.git.pull()
         return True
     except git.GitCommandError:
-        d.msgbox("Someone else made changes that conflicts with yours.\n\n"
-                 "Call 555-fme@odoo.com in order to fix this !", width=60)
+        d.msgbox("Someone else made changes that conflicts with yours.\n\n" + emergency, width=60)
         return False
 
 def push_changes():
@@ -133,6 +133,17 @@ def push_changes():
 def discard_changes():
     if repo.is_dirty and d.yesno("Are you sure you want to discard your changes ?") == d.OK:
         repo.git.checkout('.')
+    return True
+
+def show_diff():
+    try:
+        clear()
+        print("Checking differences...")
+        repo.git.add('-A', '.')
+        repo.git.qdiff('HEAD')
+        repo.git.reset('HEAD')
+    except Exception:
+        d.msgbox("Sorry but the required tool for this option is not installed on your computer.\n\n" + emergency, width=60)
     return True
 
 def switch_branch():
@@ -168,11 +179,14 @@ def main_menu():
         ("1)", "Start server"),
         ("2)", "Start server and reset database"),
         # ("3)", "Create a new theme"),
-        # ("4)", "Switch to another theme"),
     ]
+    if len(repo.branches) > 1:
+        choices.append(("4)", "Switch to another theme"))
+
     if repo.is_dirty:
         choices.append(("5)", "Push changes"))
         choices.append(("6)", "Discard changes"))
+        choices.append(("7)", "View changes"))
     choices.append(("Q)", "Quit"))
     code, tag = d.menu(title, choices=choices, height=20)
     clear()
@@ -189,6 +203,8 @@ def main_menu():
             return push_changes()
         elif tag == '6)':
             return discard_changes()
+        elif tag == '7)':
+            return show_diff()
     return None
 
 def clear():
