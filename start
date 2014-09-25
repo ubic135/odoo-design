@@ -142,6 +142,10 @@ def start_server(args=None, mode='i', module='website'):
 def clear():
     os.system('clear')
 
+def clean_folder(path):
+    os.system('find "%s" -name "*.pyc" -delete' % path)
+    os.system('find "%s" -type d -empty -delete' % path)
+
 def main_menu():
     title = "Current Theme: %s" % repo.active_branch
     if repo.is_dirty:
@@ -206,6 +210,7 @@ def switch_branch():
                 print("Switching to theme %s..." % new_branch)
                 repo.git.checkout(new_branch)
                 pull_changes()
+                clean_folder(themes_dir)
             except:
                 d.msgbox("There was an error switching to theme `%s`" % new_branch)
     return True
