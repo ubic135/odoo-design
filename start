@@ -15,7 +15,7 @@ except Exception:
         Linux
         -----
 
-        sudo pip install gitpython python2-pythondialog git-qdiff
+        sudo pip install gitpython python2-pythondialog git-qdiff qbzr
         sudo apt-get install dialog
 
         OSX
@@ -56,6 +56,18 @@ try:
 except git.errors.InvalidGitRepositoryError:
     sys.exit("%s is not a git repository" % themes_dir)
 
+menu_entries = []
+def menu_entry(title, key, conditional=None):
+    if conditional is None:
+        conditional = lambda: True
+    def decorator(fn):
+        if any([menu['key'] == key for menu in menu_entries]):
+            raise KeyError("Duplicate key for menu item '%s' %r" % (title, fn))
+        menu_entries.append(dict(title=title, key=key, conditional=conditional, fn=fn))
+        return fn
+    return decorator
+
+# HELPERS
 def database_list():
     cmd = 'psql -c "SELECT datname FROM pg_database WHERE datistemplate = false and datname <> \'postgres\';" -d postgres'
     status, out = commands.getstatusoutput(cmd)
@@ -69,6 +81,30 @@ def database_list():
 
 def database_exists(dbname):
     return dbname in database_list()
+
+def repo_is_clean():
+    if repo.is_dirty:
+        msg = "In order to continue you have to push your changes first.\n\nDo you want to do this now ?"
+        r = d.yesno(msg, width=40)
+        if r != d.OK:
+            return False
+        push_changes()
+    return True
+
+def server_update():
+    clear()
+    print("Check for server updates...")
+    return server.git.pull() != 'Already up-to-date.' # Gasp!
+
+def pull_changes():
+    try:
+        clear()
+        print("Checking if someone else made changes to your theme...")
+        repo.git.pull()
+        return True
+    except git.GitCommandError:
+        d.msgbox("Someone else made changes that conflicts with yours.\n\n" + emergency, width=60)
+        return False
 
 def start_server(args=None, mode='i', module='website'):
     db = repo.active_branch
@@ -103,6 +139,37 @@ def start_server(args=None, mode='i', module='website'):
         return False
     return True
 
+def clear():
+    os.system('clear')
+
+def main_menu():
+    title = "Current Theme: %s" % repo.active_branch
+    if repo.is_dirty:
+        title += "\n\nNOTE: You have unpushed changes !"
+    choices = []
+    for choice in menu_entries:
+        if choice['conditional']():
+            key = '%s)' % choice['key']
+            choices.append((key, choice['title']))
+    choices.append(("Q)", "Quit"))
+    code, tag = d.menu(title, choices=choices, height=(len(choices) + 10), menu_height=len(choices))
+    clear()
+    if code == d.OK:
+        for menu in menu_entries:
+            if tag[0] == menu['key']:
+                return menu['fn']()
+    return None
+
+# MENU ENTRIES
+@menu_entry("Start server", key='S')
+def start_server_normal():
+    return start_server(mode='u')
+
+@menu_entry("Start server and reset database", key='R')
+def start_server_reset():
+    return start_server(mode='i')
+
+@menu_entry("Database Manager", key='M', conditional=lambda: False)
 def db_manager():
     databases = database_list()
     if databases:
@@ -117,51 +184,59 @@ def db_manager():
                     d.msgbox("Could not drop database '%s'" % db)
     return True
 
-def repo_is_clean():
-    if repo.is_dirty:
-        msg = "In order to continue you have to push your changes first.\n\nDo you want to do this now ?"
-        r = d.yesno(msg, width=40)
-        if r != d.OK:
-            return False
-        push_changes()
+@menu_entry("Create a new Theme", key='C', conditional=lambda: False)
+def create_theme():
     return True
 
-def server_update():
-    clear()
-    print("Check for server updates...")
-    return server.git.pull() != 'Already up-to-date.' # Gasp!
+@menu_entry("Switch to another theme", key='W', conditional=lambda: len(repo.branches) > 1)
+def switch_branch():
+    if repo_is_clean():
+        default = None
+        choices = []
+        for i, branch in enumerate(sorted(repo.branches, key=lambda r: r.name)):
+            code = '%d)' % (i + 1)
+            if branch.name == repo.active_branch:
+                default = code
+            choices.append((code, branch.name))
+        code, tag = d.menu("Select the theme to work on", choices=choices, default_item=default)
+        if code == d.OK:
+            new_branch = filter(lambda c: c[0] == tag, choices)[0][1]
+            try:
+                clear()
+                print("Switching to theme %s..." % new_branch)
+                repo.git.checkout(new_branch)
+                pull_changes()
+            except:
+                d.msgbox("There was an error switching to theme `%s`" % new_branch)
+    return True
 
-def pull_changes():
-    try:
-        clear()
-        print("Checking if someone else made changes to your theme...")
-        repo.git.pull()
-        return True
-    except git.GitCommandError:
-        d.msgbox("Someone else made changes that conflicts with yours.\n\n" + emergency, width=60)
-        return False
-
+@menu_entry("Push changes", key='P', conditional=lambda: repo.is_dirty)
 def push_changes():
     if pull_changes() and repo.is_dirty:
         code, msg = d.inputbox("For your own organisation and a better collaboration,"
             "it's better to provide a short message explaining your changes.\n\n"
             "Eg: Added a new 'Contact Us' snippet", width=70)
         if code == d.OK:
-            clear()
-            print("Pushing changes...")
-            repo.git.add('-A', '.')
-            repo.git.commit('-a', '-m', (msg or 'm'))
-            repo.git.push('origin')
+            if not msg:
+                d.msgbox("Could not push changes without a message.")
+            else:
+                clear()
+                print("Pushing changes...")
+                repo.git.add('-A', '.')
+                repo.git.commit('-a', '-m', (msg or 'm'))
+                repo.git.push('origin')
     return True
 
+@menu_entry("Discard changes", key='D', conditional=lambda: repo.is_dirty)
 def discard_changes():
     msg = "Are you REALLY sure you want to discard your changes ?\n\nType 'ok' in the box below to proceed."
     if repo.is_dirty:
-        button, text = d.inputbox(msg, width=60)
+        button, text = d.inputbox(msg, width=35)
         if button == d.OK and text.lower() == 'ok':
             repo.git.checkout('.')
     return True
 
+@menu_entry("View changes", key='V', conditional=lambda: repo.is_dirty)
 def show_diff():
     try:
         clear()
@@ -173,73 +248,7 @@ def show_diff():
         d.msgbox("Sorry but the required tool for this option is not installed on your computer.\n\n" + emergency, width=60)
     return True
 
-def switch_branch():
-    if repo_is_clean():
-        default = None
-        choices = {}
-        for i, branch in enumerate(sorted(repo.branches, key=lambda r: r.name)):
-            code = '%d)' % (i + 1)
-            if branch.name == repo.active_branch:
-                default = code
-            choices[code] = branch.name
-        choices_list = [(k, v) for k, v in choices.items()]
-        code, tag = d.menu("Select the theme to work on", choices=choices_list, default_item=default)
-        if code == d.OK:
-            new_branch = choices[tag]
-            try:
-                clear()
-                print("Switching to theme %s..." % new_branch)
-                repo.git.checkout(new_branch)
-                pull_changes()
-            except:
-                d.msgbox("There was an error switching to theme `%s`" % new_branch)
-    return True
-
-def create_theme():
-    return True
-
-def main_menu():
-    title = "Current Theme: %s" % repo.active_branch
-    if repo.is_dirty:
-        title += "\n\nNOTE: You have unpushed changes !"
-    choices = [
-        ("1)", "Start server"),
-        ("2)", "Start server and reset database"),
-        ("3)", "Drop a database"),
-        ("4)", "Create a new theme [NOT READY TO USE]"),
-    ]
-    if len(repo.branches) > 1:
-        choices.append(("5)", "Switch to another theme"))
-
-    if repo.is_dirty:
-        choices.append(("6)", "Push changes"))
-        choices.append(("7)", "Discard changes"))
-        choices.append(("8)", "View changes"))
-    choices.append(("Q)", "Quit"))
-    code, tag = d.menu(title, choices=choices, height=(len(choices) + 7))
-    clear()
-    if code == d.OK:
-        if tag == '1)':
-            return start_server(mode='u')
-        elif tag == '2)':
-            return start_server(mode='i')
-        elif tag == '3)':
-            return db_manager()
-        elif tag == '4)':
-            return create_theme()
-        elif tag == '5)':
-            return switch_branch()
-        elif tag == '6)':
-            return push_changes()
-        elif tag == '7)':
-            return discard_changes()
-        elif tag == '8)':
-            return show_diff()
-    return None
-
-def clear():
-    os.system('clear')
-
+# MAIN
 call = cmd_args['call']
 if call:
     fn = globals().get(call)
