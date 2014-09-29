@@ -82,6 +82,10 @@ def database_list():
 def database_exists(dbname):
     return dbname in database_list()
 
+def drop_database(dbname, silent=False):
+    if os.system('dropdb %s' % dbname) and not silent:
+        d.msgbox("Could not drop database '%s'" % dbname)
+
 def repo_is_clean():
     if repo.is_dirty:
         msg = "In order to continue you have to push your changes first.\n\nDo you want to do this now ?"
@@ -106,8 +110,10 @@ def pull_changes():
         d.msgbox("Someone else made changes that conflicts with yours.\n\n" + emergency, width=60)
         return False
 
-def start_server(args=None, mode='i', module='website'):
+def start_server(args=None, mode='i', module='website', dropdb=False):
     db = repo.active_branch
+    if dropdb:
+        drop_database(db, silent=True)
     db_cmp = db.replace('-', '_')
     modules = os.listdir(themes_dir)
     for mod in modules:
@@ -123,7 +129,7 @@ def start_server(args=None, mode='i', module='website'):
         mode = 'i'
     elif server_updated:
         d.msgbox("A new version of the server has been downloaded and a database upgrade will be forced.\n\n"
-                 "If you experience problems, maybe you should consider deleting your databases.", width=60)
+                 "If you experience problems, maybe you should consider using the option 'Start server and reset database'.", width=60)
         mode = 'u'
         module = 'base'
 
@@ -171,7 +177,7 @@ def start_server_normal():
 
 @menu_entry("Start server and reset database", key='R')
 def start_server_reset():
-    return start_server(mode='i')
+    return start_server(mode='i', dropdb=True)
 
 @menu_entry("Database Manager", key='M', conditional=lambda: False)
 def db_manager():
@@ -184,8 +190,7 @@ def db_manager():
             clear()
             for db in dbs:
                 print("Dropping database %s" % db)
-                if os.system('dropdb %s' % db):
-                    d.msgbox("Could not drop database '%s'" % db)
+                drop_database(db)
     return True
 
 @menu_entry("Create a new Theme", key='C', conditional=lambda: False)
