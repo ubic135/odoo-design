@@ -97,8 +97,17 @@ def repo_is_clean():
 
 def server_update():
     clear()
-    print("Check for server updates...")
-    return server.git.pull() != 'Already up-to-date.' # Gasp!
+    print("Checking for server updates...")
+    try:
+        # current = server.heads[0].commit.id
+        # server.git.fetch('--all')
+        # server.git.reset('--hard', 'origin')
+        # new = server.heads[0].commit.id
+        # return current != new
+        return server.git.pull() != 'Already up-to-date.' # Gasp!
+    except Exception:
+        d.msgbox("Could not udpate server.\n\n" + emergency)
+        return False
 
 def pull_changes():
     try:
