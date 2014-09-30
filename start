@@ -95,23 +95,27 @@ def repo_is_clean():
         push_changes()
     return True
 
+def get_repo_head(gitrepo):
+    return filter(lambda h: h.name == gitrepo.active_branch, gitrepo.heads)[0]
+
 def server_update():
-    clear()
-    print("Checking for server updates...")
-    try:
-        # current = server.heads[0].commit.id
-        # server.git.fetch('--all')
-        # server.git.reset('--hard', 'origin')
-        # new = server.heads[0].commit.id
-        # return current != new
-        return server.git.pull() != 'Already up-to-date.' # Gasp!
-    except Exception:
-        d.msgbox("Could not udpate server.\n\n" + emergency)
-        return False
+    if server.is_dirty and 1 == 0:
+        d.msgbox("Can't do server upgrade when the repository is dirty.", width=35)
+    else:
+        print("Checking for server updates...")
+        try:
+            # current = get_repo_head(server).commit.id
+            # server.git.fetch('--all')
+            # server.git.reset('--hard', 'origin')
+            # new = get_repo_head(server).commit.id
+            # return current != new
+            return 'is up to date' not in server.git.pull('--rebase') # Gasp!
+        except Exception:
+            d.msgbox("Could not udpate the server.\n\n" + emergency)
+    return False
 
 def pull_changes():
     try:
-        clear()
         print("Checking if someone else made changes to your theme...")
         repo.git.pull()
         return True
@@ -172,7 +176,6 @@ def main_menu():
             choices.append((key, choice['title']))
     choices.append(("Q)", "Quit"))
     code, tag = d.menu(title, choices=choices, height=(len(choices) + 10), menu_height=len(choices))
-    clear()
     if code == d.OK:
         for menu in menu_entries:
             if tag[0] == menu['key']:
