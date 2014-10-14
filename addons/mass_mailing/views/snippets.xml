@@ -11,7 +11,7 @@
                 <span class="oe_snippet_thumbnail_title">Newsletter</span>
             </div>
 
-            <div class="oe_snippet_body input-group js_subscribe"
+            <div class="oe_snippet_body input-group js_subscribe o_block_mass_mailing"
                       data-list-id="0">
                 <input
                       type="email"

@@ -11,7 +11,7 @@
                 <span class="oe_snippet_thumbnail_title">Discussion Group</span>
             </div>
 
-            <div class="oe_snippet_body js_follow_alias"
+            <div class="oe_snippet_body js_follow_alias o_block_mailgroup_subscribe"
                       data-id="0"
                       data-object="mail.group"
                       data-follow="off">
