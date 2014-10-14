@@ -14,7 +14,7 @@
 <div id="snippet_structure" class="tab-pane active">
 
     <div name="Banner" class="o_block_banner">
-        <div id="myCarousel" class="carousel slide mb32 o_block_banner_snip" data-interval="10000" style="height: 320px;">
+        <div id="myCarousel" class="carousel slide o_block_banner_snip" data-interval="10000" style="height: 320px;">
             <!-- Indicators -->
             <ol class="carousel-indicators hidden">
                 <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
@@ -137,7 +137,7 @@
     </div>
 
     <div name="Big Message" class="o_block_jumbotron">
-        <section class="jumbotron mt16 mb16 o_block_jumbotron_snip">
+        <section class="jumbotron o_block_jumbotron_snip">
             <div class="container">
                 <h1>Sell Online. Easily.</h1>
                 <p>
@@ -154,7 +154,7 @@
 
 
     <div name="Text Block" class="o_block_text_block">
-        <section class="mt16 mb16 o_block_text_block_snip">
+        <section class="o_block_text_block_snip">
             <div class="container">
                 <div class="row">
                     <div class="col-md-12 text-center mt16 mb32">
@@ -201,7 +201,7 @@
     </div>
 
     <div name="Features" class="o_block_features">
-        <section class="mb16 o_block_features_snip">
+        <section class="o_block_features_snip">
             <div class="container">
                 <div class="row mt16 mb16">
                     <div class="col-md-4 text-center">
@@ -228,7 +228,7 @@
     </div>
 
     <div name="Big Picture" class="o_block_big_picture">
-        <section class="oe_dark mt16 mb16 o_block_big_picture_snip">
+        <section class="oe_dark o_block_big_picture_snip">
             <div class="container">
                 <div class="row">
                     <div class="col-md-12 text-center mt32 mb32">
@@ -256,7 +256,7 @@
     </div>
 
     <div name="Three Columns" class="o_block_three_columns">
-        <section class="mt16 mb16 o_block_three_columns_snip">
+        <section class="o_block_three_columns_snip">
             <div class="container">
                 <div class="row">
                     <div class="col-md-4">
@@ -596,7 +596,7 @@
 
 
     <div name="References" class="o_block_references">
-        <section class="mb32 mt16 o_block_references">
+        <section class="o_block_references">
             <div class="container">
                 <div class="row">
                     <div class="col-md-12">
@@ -646,7 +646,7 @@
     </div>
 
     <div name="Quotes Slider" class="o_block_quotes_slider">
-        <div id="myQuoteCarousel" class="carousel quotecarousel slide mb0 o_block_quotes_slider_snip" data-interval="10000">
+        <div id="myQuoteCarousel" class="carousel quotecarousel slide o_block_quotes_slider_snip" data-interval="10000">
             <!-- Indicators -->
             <ol class="carousel-indicators mb0">
                 <li data-target="#myQuoteCarousel" data-slide-to="0" class="active"></li>
@@ -695,7 +695,7 @@
     </div>
 
     <div name="Feature Grid" class="o_block_features">
-        <section class="mb16 o_block_features">
+        <section class="o_block_features">
             <div class="container">
                 <div class="row">
                     <div class="col-md-5 text-center">
