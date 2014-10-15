@@ -46,6 +46,13 @@
             // load gallery modal template
             website.add_template_file('/website/static/src/xml/website.gallery.xml');
         }
+        var $showcase = $("#js_snippets_showcase");
+        if ($showcase.size()) {
+            // Start snippets showcase
+            var showcase = new website.snippet.ShowCase();
+            showcase.setElement($showcase);
+            showcase.start();
+        }
 
         website.snippet.start_animation();
     });
@@ -227,6 +234,71 @@
                 $modal.find(".carousel").carousel();
             }
         } // click_handler  
+    });
+
+    website.snippet.ShowCase = openerp.Widget.extend({
+        snippets_url: '/website/snippets',
+        init: function () {
+            this.qweb = new QWeb2.Engine();
+            this.qweb.prefix = 'ts';
+            return this._super.apply(this, arguments);
+        },
+        start: function () {
+            var self = this;
+            return $.when(this._super.apply(this, arguments))
+                .then(function () {
+                    return self.load_snippets();
+                }).then(function () {
+                    self.load_customization();
+                    self.render_showcase();
+                });
+        },
+        load_snippets: function () {
+            var self = this;
+            return openerp.jsonRpc(this.snippets_url, 'call', {}, website.get_context())
+                .then(function (html) {
+                    return self.process_snippets(html);
+                });
+        },
+        templates: function () {
+            return _.keys(this.qweb.templates);
+        },
+        process_snippets: function (html) {
+            var self = this;
+            var doc = $('<templates/>');
+            $(html).find('div.tab-pane > div').each(function () {
+                var snip = $(this);
+                var name = snip.attr('name');
+                var template = document.createElement('ts');
+                var meta = snip.find('.oe_snippet_thumbnail');
+                if (meta.size()) {
+                    name = meta.find('.oe_snippet_thumbnail_title').text();
+                    meta.remove();
+                }
+                if (~self.templates().indexOf(name)) {
+                    console.warning("Duplicate snippets name found for", name);
+                }
+                template.setAttribute('ts-name', name);
+                snip.children().appendTo(template);
+                doc.append(template);
+            });
+            this.qweb.add_template(doc[0]);
+        },
+        load_customization: function () {
+            this.qweb.add_template(this.$el.clone()[0]);
+        },
+        render_showcase: function () {
+            if (!this.qweb.has_template('main')) {
+                throw new Error("You must define a 'main' template in your showcase.");
+            }
+            try {
+                var content = this.qweb.render('main');
+                this.$el.replaceWith(content);
+            } catch(e) {
+                console.error(e.message);
+                console.info("Here's the list of currently loaded snippets", this.templates());
+            }
+        },
     });
 
 })();
