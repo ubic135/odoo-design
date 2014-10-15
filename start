@@ -99,8 +99,9 @@ def get_repo_head(gitrepo):
     return filter(lambda h: h.name == gitrepo.active_branch, gitrepo.heads)[0]
 
 def server_update():
-    if server.is_dirty and 1 == 0:
+    if server.is_dirty:
         d.msgbox("Can't do server upgrade when the repository is dirty.", width=35)
+        return True
     else:
         print("Checking for server updates...")
         try:
@@ -111,7 +112,7 @@ def server_update():
             # return current != new
             return 'is up to date' not in server.git.pull('--rebase') # Gasp!
         except Exception:
-            d.msgbox("Could not udpate the server.\n\n" + emergency)
+            d.msgbox("Could not update the server.\n\n" + emergency)
     return False
 
 def pull_changes():
