@@ -166,6 +166,14 @@ def clean_folder(path):
     os.system('find "%s" -name "*.pyc" -delete' % path)
     os.system('find "%s" -type d -empty -delete' % path)
 
+def recursive_replace(root, pattern, replace):
+    for dir, subdirs, names in os.walk(root):
+        for name in names:
+            path = os.path.join(dir, name)
+            text = open(path).read()
+            if pattern in text:
+                open(path, 'w').write(text.replace(pattern, replace))
+
 def main_menu():
     title = "Current Theme: %s" % repo.active_branch
     if repo.is_dirty:
@@ -206,8 +214,33 @@ def db_manager():
                 drop_database(db)
     return True
 
-@menu_entry("Create a new Theme", key='C', conditional=lambda: False)
+@menu_entry("Create a new Theme", key='C')
 def create_theme():
+    if repo_is_clean():
+        code, msg = d.inputbox("Technical name for your theme (no spaces, no special chars):\n\n" "Eg: theme_geek", width=50)
+        if code == d.OK and msg:
+            theme = msg.replace('-', '_')
+            code, msg = d.inputbox("What is your trigram ?\n\nEg: fme", width=20)
+            if code == d.OK and msg:
+                branch = 'master-%s-%s' % (theme.replace('_', '-'), msg)
+                remote = repo.git.remote().splitlines()[0]
+                print("Creating new '%s' branch" % branch)
+                # new branch without commits
+                repo.git.checkout('--orphan', branch)
+                # clean any potential *.pycs
+                clean_folder(themes_dir)
+                # ensures the working directory is clean
+                repo.git.reset()
+                repo.git.clean('-f', '-d')
+                # Bring __scaffold__ folder from origin/master
+                repo.git.checkout('%s/master' % remote, '--', '__scaffold__')
+                scaffold_dir = os.path.join(themes_dir, '__scaffold__')
+                recursive_replace(scaffold_dir, '__scaffold__', theme)
+                repo.git.mv('__scaffold__', theme)
+                repo.git.commit('-a', '-m', 'Initial commit')
+                print("Pushing your new branch on github...")
+                repo.git.push('-u', remote, branch)
+
     return True
 
 @menu_entry("Switch to another theme", key='W', conditional=lambda: len(repo.branches) > 1)
