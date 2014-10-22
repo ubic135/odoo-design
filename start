@@ -124,15 +124,18 @@ def pull_changes():
         d.msgbox("Someone else made changes that conflicts with yours.\n\n" + emergency, width=60)
         return False
 
-def start_server(args=None, mode='i', module='website', dropdb=False):
+def start_server(args=None, mode='i', module=None, dropdb=False):
     db = repo.active_branch
     if dropdb:
         drop_database(db, silent=True)
     db_cmp = db.replace('-', '_')
     modules = os.listdir(themes_dir)
-    for mod in modules:
-        if mod in db_cmp:
-            module = mod
+    if module is None:
+        for mod in modules:
+            if mod in db_cmp:
+                module = mod
+    if module is None:
+        module = 'website'
     if args is None:
         args = []
     addons_path = "%s/addons,%s" % (odoo_dir, themes_dir)
@@ -192,9 +195,13 @@ def main_menu():
     return None
 
 # MENU ENTRIES
-@menu_entry("Start server", key='S')
+@menu_entry("Start server and update theme", key='S')
 def start_server_normal():
     return start_server(mode='u')
+
+@menu_entry("Start server and update all modules", key='U')
+def start_server_update():
+    return start_server(mode='u', module='all')
 
 @menu_entry("Start server and reset database", key='R')
 def start_server_reset():
