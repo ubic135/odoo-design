@@ -253,7 +253,13 @@ def switch_branch():
             if branch.name == repo.active_branch:
                 default = code
             choices.append((code, branch.name))
-        code, tag = d.menu("Select the theme to work on", choices=choices, default_item=default)
+        code, tag = d.menu(
+                "Select the theme to work on",
+                choices=choices,
+                default_item=default,
+                height=min(30, 15+len(choices)),
+                menu_height=min(30, len(choices))
+            )
         if code == d.OK:
             new_branch = filter(lambda c: c[0] == tag, choices)[0][1]
             try:
