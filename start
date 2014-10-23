@@ -15,8 +15,8 @@ except Exception:
         Linux
         -----
 
-        sudo pip install gitpython python2-pythondialog git-qdiff qbzr
-        sudo apt-get install dialog
+        sudo pip install gitpython python2-pythondialog git-qdiff
+        sudo apt-get install dialog qbzr
 
         OSX
         ---
