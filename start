@@ -2,6 +2,8 @@
 import argparse
 import commands
 import os
+import signal
+import subprocess
 import sys
 import textwrap
 try:
@@ -125,6 +127,7 @@ def pull_changes():
         return False
 
 def start_server(args=None, mode='i', module=None, dropdb=False):
+    kill_existing_server()
     db = repo.active_branch
     if dropdb:
         drop_database(db, silent=True)
@@ -161,6 +164,14 @@ def start_server(args=None, mode='i', module=None, dropdb=False):
         print("As the server has recently been updated, it is necessary that you restart the 'start.sh' program again.\n\n")
         return False
     return True
+
+def kill_existing_server():
+    p = subprocess.Popen(['ps', '-A'], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    for line in out.splitlines():
+        if '/openerp-server start' in line:
+            pid = int(line.split(None, 1)[0])
+            os.kill(pid, signal.SIGKILL)
 
 def clear():
     os.system('clear')
